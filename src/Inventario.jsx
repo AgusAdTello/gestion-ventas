@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { getDb } from "./db";
 import ExcelJS from "exceljs";
-import { Download } from "lucide-react";
+import { Download, Search } from "lucide-react";
 
 export default function Inventario() {
   const [productos, setProductos] = useState([]);
+  const [busqueda, setBusqueda] = useState(""); // Estado para guardar lo que el usuario escribe
 
   useEffect(() => {
     cargarInventario();
@@ -27,14 +28,14 @@ export default function Inventario() {
     const sheet = workbook.addWorksheet("Inventario Actual");
 
     sheet.columns = [
-      { header: "Mermelada", key: "nombre", width: 35 },
+      { header: "Producto", key: "nombre", width: 35 },
       { header: "Precio Actual", key: "precio", width: 18 },
       { header: "Stock Disponible", key: "stock", width: 18 }
     ];
 
     const filaCabecera = sheet.getRow(1);
     filaCabecera.font = { bold: true, color: { argb: "FFFFFFFF" } };
-    filaCabecera.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF3B82F6" } }; // Azul claro
+    filaCabecera.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF3B82F6" } };
     
     productos.forEach(p => {
       sheet.addRow({
@@ -49,7 +50,7 @@ export default function Inventario() {
     const url = window.URL.createObjectURL(blob);
     const anchor = document.createElement("a");
     anchor.href = url;
-    anchor.download = "Stock_Mis_Sabores.xlsx";
+    anchor.download = "Stock_Mercaderia.xlsx"; // Nombre genérico
     anchor.click();
     window.URL.revokeObjectURL(url);
   };
@@ -59,6 +60,11 @@ export default function Inventario() {
     if (stock < 5) return <div className="w-4 h-4 rounded-full bg-yellow-400 shadow-sm" title="Stock Bajo"></div>;
     return <div className="w-4 h-4 rounded-full bg-green-500 shadow-sm" title="Stock Normal"></div>;
   };
+
+  // Filtramos la lista en tiempo real según lo que se escriba en el buscador
+  const productosFiltrados = productos.filter(p => 
+    p.nombre.toLowerCase().includes(busqueda.toLowerCase())
+  );
 
   return (
     <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-100">
@@ -81,23 +87,39 @@ export default function Inventario() {
         </div>
       </div>
 
+      {/* --- NUEVO BUSCADOR --- */}
+      <div className="mb-6 relative">
+        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+          <Search size={18} className="text-gray-400" />
+        </div>
+        <input
+          type="text"
+          placeholder="Buscar producto por nombre..."
+          value={busqueda}
+          onChange={(e) => setBusqueda(e.target.value)}
+          className="w-full pl-10 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all bg-gray-50"
+        />
+      </div>
+
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="bg-gray-50 border-b border-gray-200 text-gray-600">
               <th className="p-4 font-semibold rounded-tl-lg">Estado</th>
-              <th className="p-4 font-semibold">Mermelada</th>
+              <th className="p-4 font-semibold">Producto</th>
               <th className="p-4 font-semibold">Precio</th>
               <th className="p-4 font-semibold rounded-tr-lg">Stock Disponible</th>
             </tr>
           </thead>
           <tbody>
-            {productos.length === 0 ? (
+            {productosFiltrados.length === 0 ? (
               <tr>
-                <td colSpan="4" className="p-8 text-center text-gray-500">Todavía no hay mermeladas cargadas.</td>
+                <td colSpan="4" className="p-8 text-center text-gray-500">
+                  {busqueda ? "No se encontraron productos con ese nombre." : "Todavía no hay productos cargados."}
+                </td>
               </tr>
             ) : (
-              productos.map((producto) => (
+              productosFiltrados.map((producto) => (
                 <tr key={producto.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                   <td className="p-4"><div className="flex justify-center w-8">{renderIndicador(producto.stock)}</div></td>
                   <td className="p-4 font-medium text-gray-800">{producto.nombre}</td>
